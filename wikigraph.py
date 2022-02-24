@@ -1,5 +1,3 @@
-
-from logging import root
 import wikiarticle
 from time import time
 from pyvis.network import Network

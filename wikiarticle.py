@@ -1,6 +1,3 @@
-from tokenize import group
-from tracemalloc import stop
-from urllib import response
 import requests
 import re
 import time

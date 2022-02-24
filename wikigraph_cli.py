@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 from wikigraph import WikiGraph
 from argparse import ArgumentParser
 
