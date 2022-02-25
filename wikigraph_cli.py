@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 from wikigraph import WikiGraph
 from argparse import ArgumentParser
-
+"""CLI for the Wikigraph, with commandline options.
+"""
 
 if __name__=='__main__':
 

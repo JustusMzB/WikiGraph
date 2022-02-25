@@ -3,7 +3,17 @@ import re
 import time
 
 class WikiArticle:
+    '''
+        Encapsulation of the Article, with default implementation. Alternatives could store the html permanently
+        instead of only storing the reference.
+    '''
     def __init__(self, url, session = None) -> None:
+        """Initializes the WikiArticle
+
+        Args:
+            url (str): Url to the represented wikipedia article
+            session (requests.Session, optional): Optional: The Request Session within which the articles contents are retrieved. Accelarates mass creation of WikiArticle objects. Defaults to None.
+        """
         self.session = session
         self._html_cache = None
         self.url = url
@@ -11,6 +21,11 @@ class WikiArticle:
         self.title = re.search(r'<h1 id="firstHeading" .*?>(.*?)</h1>', self.html).group(1)
     @property
     def html(self):
+        """Html of the article page
+
+        Returns:
+            str: Html of the wikipedia page
+        """                                                                                                                                         
         if self._html_cache:
             return self._html_cache
         elif self.session != None:
@@ -20,6 +35,11 @@ class WikiArticle:
         return response.content.decode("UTF_8")
     @property
     def references(self):
+        """Contains all references, attemptedly filtered to only include references to articles.
+
+        Returns:
+            list[str]: reference urls to wikipedia articles referenced within this one.
+        """
         html = self.html
         # No hashtags, used in wikipedia for internal referencing
         validtags =  re.findall(r'<a href="/wiki/[^#]*?">', html)
@@ -48,6 +68,8 @@ class WikiArticle:
         return not self == __o
     
 if __name__ == "__main__":
+    """Test is run if the module is executed.
+    """
     session = requests.Session()
     article =WikiArticle("https://de.wikipedia.org/wiki/Harry_Potter_%28Filmreihe%29", session=session)
     start = time.time()
