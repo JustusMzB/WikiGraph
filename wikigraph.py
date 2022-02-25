@@ -118,7 +118,7 @@ class WikiGraph:
         self.nodes[self.root.article.url] = self.root
         self.complete_to_depth(depth)
 
-    def add_node(self, url, parent: WikiNode):
+    def _add_node(self, url, parent: WikiNode):
         """Adds a node to the graph.
 
         Args:
@@ -144,7 +144,7 @@ class WikiGraph:
             raise ValueError("Only References of Articles within the graph may be added!")
         size = len(self.nodes)
         for reference in node.article.references:
-            self.add_node(reference, node)
+            self._add_node(reference, node)
             size += 1
             if size >= self.max_nodes: return
 
