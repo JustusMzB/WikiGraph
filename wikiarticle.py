@@ -2,12 +2,18 @@ import requests
 import re
 import time
 
+from reference_extractors.german_wiki_article_extractor import GermanWikipediaArticleReferenceExtractor
+from reference_extractors.reference_extractor import ReferenceExtractor
+
 class WikiArticle:
     '''
         Encapsulation of the Article, with default implementation. Alternatives could store the html permanently
         instead of only storing the reference.
     '''
-    def __init__(self, url, session = None) -> None:
+    # Vision for Extension: Implement static factory method that selects the appropriate extractor for an Article based on url.
+    # Eg: de.wikipedia.org/* -> German extractor
+    # en.wikipedia.org/* -> English extractor
+    def __init__(self, url, reference_extractor: ReferenceExtractor = GermanWikipediaArticleReferenceExtractor(), session = None) -> None:
         """Initializes the WikiArticle
 
         Args:
@@ -15,6 +21,7 @@ class WikiArticle:
             session (requests.Session, optional): Optional: The Request Session within which the articles contents are retrieved. Accelarates mass creation of WikiArticle objects. Defaults to None.
         """
         self.session = session
+        self.__reference_extractor = reference_extractor
         self._html_cache = None
         self.url = url
         self._html_cache = self.html      
@@ -41,26 +48,10 @@ class WikiArticle:
             list[str]: reference urls to wikipedia articles referenced within this one.
         """
         html = self.html
-        # No hashtags, used in wikipedia for internal referencing
-        validtags =  re.findall(r'<a href="/wiki/[^#]*?">', html)
-        # Fürs erste wird sich auf das deutsche Wikipedia beschränkt. Internationale Artikel sind auf jeden Fall noch in planung.
-        # internationaltags = re.findall(r'<a href="https://..\.wikipedia.org/wiki/.*?">', html)
-        full_references = set()
-        for tag in validtags:
-            #todo: Filter out references where the link ends on a data ending.
-            link_with_end =  re.search(r'/wiki/.*?"', tag).group(0)
-            base_url = re.search(r'https://..\.wikipedia.org', self.url).group(0)
-            link_with_end = link_with_end.replace('"', '')
-            full_references.add(base_url + link_with_end)
-        #for tag in internationaltags:
-            #link = re.search(r'"https://.*?"', tag).group(0)
-            #link.replace('"', '')
-            #full_references.append(link)
-
-        #Vermutung: Bei Baumerstellung wird das HTML nur zwei mal benötigt, deshalb kann das cached html jetzt
-        #für die garbage collection freigegeben werden.
+        # Apply the Reference extractor to the html.
+        references = self.__reference_extractor(html)
         self._html_cache = None
-        return full_references
+        return references
     
     def __eq__(self, __o: object) -> bool:
         return isinstance(__o, WikiArticle) and self.url == __o.url

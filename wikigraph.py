@@ -1,3 +1,4 @@
+from xmlrpc.client import boolean
 import wikiarticle
 from time import time
 from pyvis.network import Network
@@ -177,7 +178,7 @@ class WikiGraph:
         Returns:
             WikiNode: Node with the most outgoing references aka. highest out degree
         """
-        return max(self.nodes.keys(), key=lambda node: node.out_degree)
+        return max(self.nodes.values(), key=lambda node: node.out_degree)
 
     @property
     def with_max_in_degree(self):
@@ -185,7 +186,7 @@ class WikiGraph:
         Returns:
             WikiNode: Node with the most incoming references aka. highest in degree
         """
-        return max(self.nodes.keys(), key=lambda node: node.in_degree)
+        return max(self.nodes.values(), key=lambda node: node.in_degree)
 
     def _count_edges(self):
         """
@@ -193,10 +194,10 @@ class WikiGraph:
             int: amount of edges within the graph
         """
         counter = 0
-        for i in self.nodes.keys():
+        for i in self.nodes.values():
             counter += len(i.referenced_nodes)
         return counter
-
+    @property
     def graph_density(self):
         """
 
@@ -207,40 +208,31 @@ class WikiGraph:
         return self._count_edges() / (len(self.nodes) * (len(self.nodes) -1))
 
     @debug_timing
-    def draw(self):
+    def draw(self, search_term:str=None, search_html:boolean=False):
         """Creates an html file with a visualization of the graph, and opens it in the standard browser.
+
+        Args:
+            search_term (str, optional): If set, all nodes containing the search term will be highlighted in the graph depiction. Defaults to None.
+            search_html (boolean, optional): If set, html will be searched for the search term.
         """
         network = Network(directed=True)
-        for node in self.nodes:
-            network.add_node(node, label=self.nodes[node].article.title)
-        for node in self.nodes.values():
-            for referenced in node.referenced_nodes:
-                network.add_edge(node.article.url, referenced.article.url)
-        network.show_buttons()
-        ### Standard options exported from configureable view.
-        network.set_options('''"var options = {
-  "edges": {
-    "color": {
-      "inherit": true
-    },
-    "smooth": false
-  },
-  "layout": {
-    "hierarchical": {
-      "enabled": true
-    }
-  },
-  "interaction": {
-    "hideEdgesOnDrag": true
-  },
-  "physics": {
-    "hierarchicalRepulsion": {
-      "centralGravity": 0
-    },
-    "minVelocity": 0.75,
-    "solver": "hierarchicalRepulsion"
-  }
-}''')
+        for node_key in self.nodes:
+            article = self.nodes[node_key].article
+            found_search=False
+            if search_term:
+                found_search = search_term in article.title
+                # Only look in HTML if required, and if title did not yield result.
+                if not found_search and search_html:
+                    found_search = search_term in article.html
+            if found_search:
+                network.add_node(node_key, label=article.title, color="red")
+            else:
+                network.add_node(node_key, label=article.title)
+        for node_key in self.nodes.values():
+            for referenced in node_key.referenced_nodes:
+                network.add_edge(node_key.article.url, referenced.article.url)
+        network.force_atlas_2based()
+        network.show_buttons(filter_=["physics"])
         network.show(name=f'{self.root.article.title.replace(" ", "_")}_graph.html')
 
 
