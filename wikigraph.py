@@ -1,4 +1,6 @@
 from xmlrpc.client import boolean
+
+from numpy import average
 import wikiarticle
 from time import time
 from pyvis.network import Network
@@ -125,6 +127,8 @@ class WikiGraph:
         Args:
             url (str): url of the new article to be added
             parent (WikiNode): Node with Article that referenced this one
+        Returns:
+            boolean: Was the node already Present, and only references needed to be updated?
         """
         if url not in self.nodes.keys():
             # slightly more resistant against bad WikiNode implementations
@@ -132,8 +136,10 @@ class WikiGraph:
             new_Node = WikiNode(url, parent.depth+1, self._getter_session)
             parent.add_reference(new_Node)
             self.nodes[url] = new_Node
+            return False
         else:
             parent.add_reference(self.nodes[url])
+            return True
 
     def add_referenced(self, node: WikiNode):
         """Overflow-safe attempt of adding all articles to the graph, which are referenced by one article
@@ -144,10 +150,13 @@ class WikiGraph:
         if node not in self.nodes.values():
             raise ValueError("Only References of Articles within the graph may be added!")
         size = len(self.nodes)
+        added_nodes = 0
         for reference in node.article.references:
-            self._add_node(reference, node)
-            size += 1
-            if size >= self.max_nodes: return
+            if not self._add_node(reference, node):
+                size += 1
+                added_nodes += 1
+            if size >= self.max_nodes: return added_nodes
+        return added_nodes
 
     @debug_timing
     def complete_to_depth(self, depth: int):
@@ -156,22 +165,48 @@ class WikiGraph:
 
         Args:
             depth (int): depth up to which references will be added to the graph
+
+        Returns:
+            int: Number of nodes that were added in this step.
         """
         size = len(self.nodes)
+        start_size = size
+        start_time = time()
+        print(f'Completing Graph to a depth of up to {depth} or a maximum of {self.max_nodes} wikinodes...')
+        total_added_nodes = 0
+        completed_nodes = 0
+        avg_treatment_time = 0
+        avg_additions = 0
         for i in range(depth):
             # Workaround: The nodes that will be added per round are not relevant, so decouple iteration from graph.
             # Otherwise we will receive a 'Dict changed Size' runtime error.
             to_be_completed_this_round = list(filter(lambda node: node.depth == i, self.nodes.values()))
-            start = time()
+            layer_start = time()
+
             for node in to_be_completed_this_round:
-                    self.add_referenced(node)
+                    node_start = time()
+                    added_nodes = self.add_referenced(node)
+                    total_added_nodes += added_nodes
+                    node_done = time() - node_start
+                    completed_nodes += 1
+
+                    # Update of progress.
+                    # Calculation per treated node averages
+                    avg_treatment_time = ((completed_nodes -1) * avg_treatment_time + node_done)/completed_nodes
+                    avg_additions = ((completed_nodes -1 ) * avg_additions + added_nodes ) /completed_nodes
+                    # Time until all layers would be completed
+                    eta_layer_limit = (avg_additions ** (depth)) * avg_treatment_time
+                    # Time until maximum nodes are reached (with estimate of single node creation time)
+                    eta_node_limit = (avg_treatment_time / avg_additions) * (self.max_nodes - start_size)
+                    # Output of estimated waiting time. ETA only grows somewhat reliable for very large graphs...
+                    print(f'Treating level {i}; total to be treated:{len(to_be_completed_this_round)}; Finished treatment for: {completed_nodes}.; nodes added:{total_added_nodes}; Estimated remaining time: {min(eta_layer_limit, eta_node_limit) - (time() - start_time):.2f}s', end='\r')
                     size = len(self.nodes)
                     if size>= self.max_nodes:
                         break
-            ex_time = time() - start
+            layer_time = time() - layer_start
             if size >= self.max_nodes:
                 break
-            print(f'took {ex_time}s to complete adding referenced articles from {len(to_be_completed_this_round)} articles.')
+        print("\nCompleted.") # Terminating the self overriding progress line
     @property
     def with_max_out_degree(self):
         """

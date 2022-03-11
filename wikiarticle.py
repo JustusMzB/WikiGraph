@@ -24,6 +24,8 @@ class WikiArticle:
         self.__reference_extractor = reference_extractor
         self._html_cache = None
         self.url = url
+        if not url.startswith("https://"):
+            raise ValueError(f'Article creation with Schema-less url: {url} was attempted.')
         self._html_cache = self.html      
         self.title = re.search(r'<h1 id="firstHeading" .*?>(.*?)</h1>', self.html).group(1)
     @property
