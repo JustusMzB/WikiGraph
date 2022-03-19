@@ -20,13 +20,14 @@ class WikiArticle:
             url (str): Url to the represented wikipedia article
             session (requests.Session, optional): Optional: The Request Session within which the articles contents are retrieved. Accelarates mass creation of WikiArticle objects. Defaults to None.
         """
-        self.session = session
+        self.__session = session
         self.__reference_extractor = reference_extractor
-        self._html_cache = None
         self.url = url
         if not url.startswith("https://"):
             raise ValueError(f'Article creation with Schema-less url: {url} was attempted.')
-        self._html_cache = self.html      
+        # Filling the html cache. Needs to be initialized, as html method is accessing it.
+        self.__html_cache = None
+        self.__html_cache = self.html      
         self.title = re.search(r'<h1 id="firstHeading" .*?>(.*?)</h1>', self.html).group(1)
     @property
     def html(self):
@@ -35,10 +36,10 @@ class WikiArticle:
         Returns:
             str: Html of the wikipedia page
         """                                                                                                                                         
-        if self._html_cache:
-            return self._html_cache
-        elif self.session != None:
-            response = self.session.get(self.url)
+        if self.__html_cache:
+            return self.__html_cache
+        elif self.__session != None:
+            response = self.__session.get(self.url)
         else:
             response = requests.get(self.url)
         return response.content.decode("UTF_8")
@@ -52,14 +53,16 @@ class WikiArticle:
         html = self.html
         # Apply the Reference extractor to the html.
         references = self.__reference_extractor(html)
-        self._html_cache = None
+        # In the graph creation process, this is the last time that html is needed. Therefore, the cache is dropped.
+        self.__html_cache = None
         return references
     
     def __eq__(self, __o: object) -> bool:
         return isinstance(__o, WikiArticle) and self.url == __o.url
     def __ne__(self, __o: object) -> bool:
         return not self == __o
-    
+    def __str__(self) -> str:
+        return f'<WikiArticle: title = {self.title}; url= {self.url}> '
 if __name__ == "__main__":
     """Test is run if the module is executed.
     """
