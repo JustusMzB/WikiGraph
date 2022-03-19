@@ -35,7 +35,7 @@ class WikiNode:
 
         self.depth = depth
 
-    def add_reference(self, referenced_node):
+    def add_outgoing_reference(self, referenced_node):
         """Adds a directed edge from the node to another, ensuring that the other node is aware of this new incoming edge.
 
         Args:
@@ -44,7 +44,7 @@ class WikiNode:
         self._outgoing.add(referenced_node)
         referenced_node._incoming.add(self)
     
-    def add_referencing(self, referencing_node):
+    def add_incoming_reference(self, referencing_node):
         """Adds a directed edge from another node to this one, ensuring that the other node is aware of this new outgoing edge.
 
         Args:
@@ -87,7 +87,8 @@ class WikiNode:
             referencing nodes: nodes that are connected to this one by incoming edges
         """
         return tuple(self._outgoing)
-
+    def __str__(self) -> str:
+        return f'< WikiNode Object wrapping article {self.article} > '
 
 class WikiGraph:
     """Graph representation of a wikipedia article and its surrounding references
@@ -107,7 +108,7 @@ class WikiGraph:
         #To download hundreds to thousands of Wikipedia-Pages by a factor of around 2
         self._getter_session = requests.Session()
 
-        self.max_nodes = max_nodes
+        self._max_nodes = max_nodes
         if type(root) == str:
             self.root = WikiNode(root, depth=0, session = self._getter_session)
         elif type(root) == WikiNode:
@@ -119,7 +120,7 @@ class WikiGraph:
 
         self.nodes : dict[str, WikiNode] = {}
         self.nodes[self.root.article.url] = self.root
-        self.complete_to_depth(depth)
+        self.width_first_completion(depth)
 
     def _add_node(self, url, parent: WikiNode):
         """Adds a node to the graph.
@@ -134,11 +135,11 @@ class WikiGraph:
             # slightly more resistant against bad WikiNode implementations
             # with bad equals implementation
             new_Node = WikiNode(url, parent.depth+1, self._getter_session)
-            parent.add_reference(new_Node)
+            parent.add_outgoing_reference(new_Node)
             self.nodes[url] = new_Node
             return False
         else:
-            parent.add_reference(self.nodes[url])
+            parent.add_outgoing_reference(self.nodes[url])
             return True
 
     def add_referenced(self, node: WikiNode):
@@ -155,11 +156,11 @@ class WikiGraph:
             if not self._add_node(reference, node):
                 size += 1
                 added_nodes += 1
-            if size >= self.max_nodes: return added_nodes
+            if size >= self._max_nodes: return added_nodes
         return added_nodes
 
     @debug_timing
-    def complete_to_depth(self, depth: int):
+    def width_first_completion(self, depth: int):
         """Width-First approach to constructing the graph. All references from within one depth will be added before proceeding
         to the next depth.
 
@@ -172,7 +173,7 @@ class WikiGraph:
         size = len(self.nodes)
         start_size = size
         start_time = time()
-        print(f'Completing Graph to a depth of up to {depth} or a maximum of {self.max_nodes} wikinodes...')
+        print(f'Completing Graph to a depth of up to {depth} or a maximum of {self._max_nodes} wikinodes...')
         total_added_nodes = 0
         completed_nodes = 0
         avg_treatment_time = 0
@@ -197,18 +198,18 @@ class WikiGraph:
                     # Time until all layers would be completed
                     eta_layer_limit = (avg_additions ** (depth)) * avg_treatment_time
                     # Time until maximum nodes are reached (with estimate of single node creation time)
-                    eta_node_limit = (avg_treatment_time / avg_additions) * (self.max_nodes - start_size)
+                    eta_node_limit = (avg_treatment_time / avg_additions) * (self._max_nodes - start_size)
                     # Output of estimated waiting time. ETA only grows somewhat reliable for very large graphs...
                     print(f'Treating level {i}; total to be treated:{len(to_be_completed_this_round)}; Finished treatment for: {completed_nodes}.; nodes added:{total_added_nodes}; Estimated remaining time: {min(eta_layer_limit, eta_node_limit) - (time() - start_time):.2f}s', end='\r')
                     size = len(self.nodes)
-                    if size>= self.max_nodes:
+                    if size>= self._max_nodes:
                         break
             layer_time = time() - layer_start
-            if size >= self.max_nodes:
+            if size >= self._max_nodes:
                 break
         print("\nCompleted.") # Terminating the self overriding progress line
     @property
-    def with_max_out_degree(self):
+    def node_with_max_out_degree(self):
         """
         Returns:
             WikiNode: Node with the most outgoing references aka. highest out degree
@@ -216,7 +217,7 @@ class WikiGraph:
         return max(self.nodes.values(), key=lambda node: node.out_degree)
 
     @property
-    def with_max_in_degree(self):
+    def node_with_max_in_degree(self):
         """
         Returns:
             WikiNode: Node with the most incoming references aka. highest in degree
@@ -233,7 +234,7 @@ class WikiGraph:
             counter += len(i.referenced_nodes)
         return counter
     @property
-    def graph_density(self):
+    def density(self):
         """
 
         Returns:
@@ -269,7 +270,7 @@ class WikiGraph:
             logging.error(errormessage)
             raise FileExistsError(errormessage)
     @staticmethod
-    def load_from_file(path):
+    def load(path):
         """Loads a wikigraph from a file
 
         Args:
@@ -317,7 +318,8 @@ class WikiGraph:
         network.force_atlas_2based()
         network.show_buttons(filter_=["physics"])
         network.show(name=f'{self.root.article.title.replace(" ", "_")}_graph.html')
-
+    def __str__(self) -> str:
+        return f'<WikiGraph Object with {len(self.nodes)} nodes: root = {self.root}>'
 
 ###
 # If the Module is executed, a graph around the wiki page of JK Rowling is created.
