@@ -1,6 +1,6 @@
+import logging
+import pickle
 from xmlrpc.client import boolean
-
-from numpy import average
 import wikiarticle
 from time import time
 from pyvis.network import Network
@@ -241,6 +241,52 @@ class WikiGraph:
             How close is the graph to having the maximum amount of edges possible for its amount of nodes.
         """
         return self._count_edges() / (len(self.nodes) * (len(self.nodes) -1))
+
+    def save(self, path=None):
+        """Saves the wikigraph to a pickle file.
+
+        Args:
+            path (str, optional): Path under which the file should be stored. Defaults to . Defaults to ./{root-title}-Wikigraph.pickle
+
+        Raises:
+            FileNotFoundError: the path does not exist.
+            FileExistsError: there is already a file in this path. No overwriting.
+        """
+        if path == None:
+            path = f'./{self.root.article.title}-Wikigraph.pickle'
+            path.replace(' ', '_')
+        
+        try:
+            file = open(path, mode='xb')
+            pickle.dump(self, file)
+            file.close()
+        except FileNotFoundError:
+            errormessage = f'The path {path} does appearently not point to a file.'
+            logging.error(errormessage)
+            raise FileNotFoundError(errormessage)
+        except FileExistsError:
+            errormessage=f'{path} points to an existing file. We are not overwriting!'
+            logging.error(errormessage)
+            raise FileExistsError(errormessage)
+    @staticmethod
+    def load_from_file(path):
+        """Loads a wikigraph from a file
+
+        Args:
+            path (str): Path to the file in which the Wikigraph is stored
+
+        Raises:
+            TypeError: The file existed, but does not hold a wikigraph.
+
+        Returns:
+            WikiGraph: wikigraph that was stored inside the file.
+        """
+        with open(path, mode='rb') as file:
+            wikigraph: WikiGraph =  pickle.load(file) # Should secure that this is a wikigraph we are loading.
+            if not isinstance(wikigraph, WikiGraph):
+                raise TypeError(f'{path} does not point to a WikiGraph-File!')
+            return wikigraph
+            
 
     @debug_timing
     def draw(self, search_term:str=None, search_html:boolean=False, height:int=1000, width:int=800):
