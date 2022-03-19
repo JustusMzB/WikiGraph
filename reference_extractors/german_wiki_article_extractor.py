@@ -26,7 +26,7 @@ class GermanWikipediaArticleReferenceExtractor(ReferenceExtractor):
 
         # These Keywords (In the german wikipedia space ) signal internal references to Kategorypages, Impressum etc.
         only_article_refs = filter(lambda ref: not re.match(r'/wiki/((Datei)|(Spezial)|(Kategorie)|(Wikipedia)|(Hilfe)|(Portal)):.*?', ref), wikipediarefs)
-        # Using separate collections, as the use of one set was the most likely to be causing the strange Bug described above.
+        # Using separate collections, as the use of one set was the most likely to be causing the strange Bug described above.g
         result_set = set()
         for ref in only_article_refs:
             # Turn all into absolute paths according to assumption of german wikipedia.
