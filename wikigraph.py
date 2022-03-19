@@ -1,7 +1,4 @@
-from cgitb import html
-from xmlrpc.client import boolean
 
-from numpy import average
 import wikiarticle
 from time import time
 from pyvis.network import Network
@@ -272,7 +269,7 @@ class WikiGraph:
         network.force_atlas_2based()
         network.show_buttons(filter_=["physics"])
         network.show(name=f'{self.root.article.title.replace(" ", "_")}_graph.html')
-        
+
     @debug_timing
     def write_to_gml(self, path, with_html=False):
         """Writes the Graph into the gml format. This allows for better investigation options in interactive
