@@ -287,12 +287,12 @@ class WikiGraph:
             
 
     @debug_timing
-    def draw(self, search_term:str=None, search_html:boolean=False, height:int=1000, width:int=800):
+    def draw(self, search_term:str=None, search_html:bool=False, height:int=1000, width:int=800):
         """Creates an html file with a visualization of the graph, and opens it in the standard browser.
 
         Args:
             search_term (str, optional): If set, all nodes containing the search term will be highlighted in the graph depiction. Defaults to None.
-            search_html (boolean, optional): If set, html will be searched for the search term.
+            search_html (bool, optional): If set, html will be searched for the search term.
             height (int, optional): Height of the graph depiction in px. Defaults to 1000
             width(int, optional): Width of the graph depiction in px. Defaults to 800
         """
