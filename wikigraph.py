@@ -316,15 +316,16 @@ class WikiGraph:
         network.show_buttons(filter_=["physics"])
         network.show(name=f'{self.root.article.title.replace(" ", "_")}_graph.html')
 
-    @debug_timing
-    def write_to_gml(self, path, with_html=False):
-        """Writes the Graph into the gml format. This allows for better investigation options in interactive
-        graph-exploration software.
+    def __make_nx_digraph(self, with_html=False):
+        """Creates nx graph for its file writing capabilities
 
         Args:
-            path (str): path to the wished for file location
-            with_html (bool, optional): If True, the html is added as a property to each node. Massively increases size. Defaults to False.
+            with_html (bool, optional): Includes html as a node property. Massively increases size. Defaults to False.
+
+        Returns:
+            Digraph: nx digraph equivalent of this wikigraph.
         """
+        
         digraph = nx.DiGraph()
         # Add nodes first, with title-Property and possibly html
         if with_html:
@@ -336,10 +337,27 @@ class WikiGraph:
         # Add all edges
         for node in self.nodes.values():
             for target_node in node.referenced_nodes:
-                digraph.add_node(node.article.url, target_node.article.url)
+                digraph.add_edge(node.article.url, target_node.article.url)
      
-        nx.write_gml(G=digraph, path=path)
-      
+        return digraph
+    def write_to_gml(self, path, with_html = False):
+        """Writes the Graph into the gml format. This allows for better investigation options in interactive
+        graph-exploration software.
+
+        Args:
+            path (str): path to the wished for file location
+            with_html (bool, optional): If True, the html is added as a property to each node. Massively increases size. Defaults to False.
+        """
+        nx.write_gml(self.__make_nx_digraph(with_html=with_html), path=path)
+
+    def write_adjacency_list(self, path):
+        """Writes the Graph into an adjacency-list format. This allows for better investigation options in interactive
+        graph-exploration software.
+
+        Args:
+            path (str): path to the wished for file location
+        """
+        nx.write_adjlist(self.__make_nx_digraph(with_html=with_html), path=path)
     def __str__(self) -> str:
         return f'<WikiGraph Object with {len(self.nodes)} nodes: root = {self.root}>'
 
