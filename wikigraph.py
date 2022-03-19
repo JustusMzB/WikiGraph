@@ -1,3 +1,4 @@
+from cgitb import html
 from xmlrpc.client import boolean
 
 from numpy import average
@@ -5,7 +6,7 @@ import wikiarticle
 from time import time
 from pyvis.network import Network
 import requests
-
+import networkx as nx
 from wikigraph_misc import debug_timing
 
 class WikiNode:
@@ -271,6 +272,30 @@ class WikiGraph:
         network.force_atlas_2based()
         network.show_buttons(filter_=["physics"])
         network.show(name=f'{self.root.article.title.replace(" ", "_")}_graph.html')
+        
+    @debug_timing
+    def write_to_gml(self, path, with_html=False):
+        """Writes the Graph into the gml format. This allows for better investigation options in interactive
+        graph-exploration software.
+
+        Args:
+            path (str): path to the wished for file location
+            with_html (bool, optional): If True, the html is added as a property to each node. Massively increases size. Defaults to False.
+        """
+        digraph = nx.DiGraph()
+        # Add nodes first, with title-Property and possibly html
+        if with_html:
+            for node in self.nodes.values():
+                digraph.add_node(node.article.url, title=node.article.title, html=node.article.html)
+        else:
+            for node in self.nodes.values():
+                digraph.add_node(node.article.url, title=node.article.title)
+        # Add all edges
+        for node in self.nodes.values():
+            for target_node in node.referenced_nodes:
+                digraph.add_node(node.article.url, target_node.article.url)
+     
+        nx.write_gml(G=digraph, path=path)
 
 
 ###
