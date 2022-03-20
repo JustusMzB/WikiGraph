@@ -35,7 +35,7 @@ if __name__=='__main__':
             if os.path.exists(args.save): 
                 print(f'There is already a file or directory at {args.save}, the graph could not be saved. Aborting creation...')
                 exit(1)
-            if not os.path.exists(os.path.dirname(args.save)):
+            if not os.path.exists(os.path.dirname(os.path.abspath(args.save))):
                 print(f'{args.save} is an invalid path. The graph could not be saved. Aborting creation...')
                 exit(1)
         print(f'Creating wikigraph around {args.url} with depth {args.depth} and maximum size {args.size}')
