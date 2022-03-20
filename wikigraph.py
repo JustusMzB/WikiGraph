@@ -1,4 +1,6 @@
 import wikiarticle
+import pickle
+import logging
 from time import time
 from pyvis.network import Network
 import requests
